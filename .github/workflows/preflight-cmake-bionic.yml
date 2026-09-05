@@ -19,7 +19,7 @@ jobs:
         run: |
           docker run --rm -v "$PWD:/w" -w /w ubuntu:18.04 bash -c '
             set -e
-            sed -i "s|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g;s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g" /etc/apt/sources.list
+            apt-get update -qq || sed -i "s|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g;s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g" /etc/apt/sources.list
             apt-get update -qq
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
               cmake make gcc g++ curl ca-certificates mingw-w64 file >/dev/null
