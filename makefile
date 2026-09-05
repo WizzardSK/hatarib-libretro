@@ -37,7 +37,7 @@ AR ?= ar
 CFLAGS += \
 	-O3 $(WERROR) -fPIC \
 	-D__LIBRETRO__ -DSHORTHASH=\"$(SHORTHASH)\" \
-	-Ihatari/$(HBD) -I$(SDL2_INCLUDE)
+	-Ihatari/$(HBD) -I$(SDL2_INCLUDE) -I$(ZLIB_INCLUDE)
 LDFLAGS += \
 	-shared $(WERROR) \
 	-lm
@@ -72,6 +72,10 @@ endif
 	CMAKEBUILDFLAGS += --verbose
 endif
 
+# Both of these describe the host, so a cross build has to be told otherwise:
+# SO_SUFFIX on the command line (makefile.libretro does it from `platform`),
+# and CMAKE_SYSTEM_NAME, without which cmake believes it is building for the
+# machine it runs on and its own try_compile checks look for the wrong file.
 ifeq ($(OS),Windows_NT)
 	SO_SUFFIX=.dll
 	LDFLAGS += -static-libgcc
@@ -80,6 +84,10 @@ else ifeq ($(shell uname),Darwin)
 else
 	SO_SUFFIX=.so
 	LDFLAGS += -static-libgcc
+endif
+
+ifneq ($(CMAKE_SYSTEM_NAME),)
+	CMAKEFLAGS += -DCMAKE_SYSTEM_NAME=$(CMAKE_SYSTEM_NAME)
 endif
 
 CORE=$(COREDIR)/$(COREFILE)$(SO_SUFFIX)

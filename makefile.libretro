@@ -29,10 +29,18 @@ else ifeq ($(platform),emscripten)
 	CORESTATIC_SUFFIX := .bc
 endif
 
+# What the makefile cannot work out for itself on a cross build, since it only
+# ever sees the host: the shared object's suffix, and that cmake is building
+# for something other than the machine it runs on.
+CROSSFLAGS :=
+ifneq ($(filter $(platform),win win32 win64 windows),)
+	CROSSFLAGS := SO_SUFFIX=.dll CMAKE_SYSTEM_NAME=Windows
+endif
+
 .PHONY: default libretro
 
 default: libretro
 
 libretro:
-	$(MAKE) -f makefile zlib
-	$(MAKE) -f makefile $(MAKEACTION) COREFILE=$(COREFILE) COREDIR=. CORESTATIC=$(CORESTATIC)$(CORESTATIC_SUFFIX)
+	$(MAKE) -f makefile zlib $(CROSSFLAGS)
+	$(MAKE) -f makefile $(MAKEACTION) COREFILE=$(COREFILE) COREDIR=. CORESTATIC=$(CORESTATIC)$(CORESTATIC_SUFFIX) $(CROSSFLAGS)
