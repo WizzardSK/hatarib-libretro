@@ -1,0 +1,40 @@
+# Fork-only: can a current cmake be delivered to a bionic image (the buildbot's
+# base, cmake 3.10.2) and configure hatari there? Not for upstream.
+name: preflight (cmake on bionic)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - preflight-**
+      - verify
+
+jobs:
+  bionic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: what a bionic image does with hatari's cmake, and with a new one
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w ubuntu:18.04 bash -c '
+            set -e
+            sed -i "s|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g;s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g" /etc/apt/sources.list
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+              cmake make gcc g++ curl ca-certificates mingw-w64 file >/dev/null
+            echo "=== the image cmake"
+            cmake --version | head -1
+            echo "=== hatari as it stands"
+            (cd hatari && cmake -S . -B /tmp/b-old 2>&1 | head -5) || true
+            echo "=== deliver one"
+            CMAKE_VER=3.31.6
+            curl -sSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-linux-x86_64.tar.gz" | tar -xz -C /opt
+            export PATH="/opt/cmake-${CMAKE_VER}-linux-x86_64/bin:$PATH"
+            cmake --version | head -1
+            echo "=== and the win64 cross build, the way makefile.libretro drives it"
+            export CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar
+            make -f makefile.libretro -j$(nproc) platform=win64
+            ls -l hatarib_libretro.dll
+            file hatarib_libretro.dll
+          '

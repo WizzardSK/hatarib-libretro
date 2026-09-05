@@ -1,0 +1,24 @@
+name: preflight (windows mingw cross)
+on: [push, workflow_dispatch]
+
+jobs:
+  mingw:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { triple: x86_64-w64-mingw32, platform: win64, pkg: g++-mingw-w64-x86-64 }
+          - { triple: i686-w64-mingw32,   platform: win32, pkg: g++-mingw-w64-i686 }
+    env:
+      # As the ci-templates pass them: in the environment.
+      CC: ${{ matrix.triple }}-gcc-posix
+      AR: ${{ matrix.triple }}-ar
+      platform: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - run: sudo apt-get update -qy && sudo apt-get install -qy ${{ matrix.pkg }} cmake
+      - run: make -f makefile.libretro
+      - name: what the buildbot's after_script then moves
+        run: ls -la hatarib_libretro.dll && file hatarib_libretro.dll

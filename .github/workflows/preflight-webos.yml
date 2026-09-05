@@ -1,0 +1,34 @@
+# Fork-only: the webOS job, with the SDK the buildbot image carries.
+name: preflight (webos)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - preflight-**
+      - fix-cross
+      - verify
+
+jobs:
+  webos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: the webOS SDK
+        run: |
+          curl -sSL -o /tmp/sdk.tar.gz \
+            https://github.com/openlgtv/buildroot-nc4/releases/download/webos-a38c582/arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz
+          sudo mkdir -p /developer
+          sudo tar xzf /tmp/sdk.tar.gz -C /developer
+          sudo /developer/arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh
+      - name: what .libretro-webos-armv7a-make-default runs
+        run: |
+          # the SDK's own cmake wants libssl.so.1.1, which this runner has not;
+          # the buildbot image has it, so keep the runner's own
+          HOST_CMAKE=$(command -v cmake)
+          . /developer/arm-webos-linux-gnueabi_sdk-buildroot/environment-setup
+          export CC_FOR_BUILD=/usr/bin/gcc CXX_FOR_BUILD=/usr/bin/g++
+          make -f makefile.libretro platform=unix CMAKE="$HOST_CMAKE"
+      - run: file hatarib_libretro.so && ls -l hatarib_libretro.so
