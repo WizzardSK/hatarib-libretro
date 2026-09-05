@@ -45,6 +45,10 @@ LDFLAGS += \
 	-lm
 
 CMAKE ?= cmake
+# What makefile.libretro adds for a cross build. It cannot pass CMAKEFLAGS
+# itself: a variable set on the make command line overrides the makefile's own
+# assignments, so everything below would go with it.
+CMAKEFLAGS += $(CMAKE_FLAGS)
 CMAKEFLAGS += \
 	-DZLIB_INCLUDE_DIR=$(ZLIB_INCLUDE) \
 	-DZLIB_LIBRARY=$(ZLIB_LIB) \
