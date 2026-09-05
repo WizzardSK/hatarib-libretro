@@ -1,0 +1,32 @@
+name: preflight (windows mingw cross)
+on: [push, workflow_dispatch]
+
+jobs:
+  mingw:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [as-is, cc-to-cmake, cc-and-system-name]
+    env:
+      CC: x86_64-w64-mingw32-gcc-posix
+      AR: x86_64-w64-mingw32-ar
+      platform: win64
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - run: sudo apt-get update -qy && sudo apt-get install -qy g++-mingw-w64-x86-64 cmake
+      - name: as-is
+        if: matrix.variant == 'as-is'
+        run: make -f makefile.libretro 2>&1 | tail -40
+      - name: with CMAKE_C_COMPILER
+        if: matrix.variant == 'cc-to-cmake'
+        env:
+          CMAKEFLAGS: -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc-posix
+        run: make -f makefile.libretro 2>&1 | tail -40
+      - name: with CMAKE_C_COMPILER and CMAKE_SYSTEM_NAME
+        if: matrix.variant == 'cc-and-system-name'
+        env:
+          CMAKEFLAGS: -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc-posix -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres
+        run: make -f makefile.libretro 2>&1 | tail -40
+      - run: ls -la hatarib_libretro.dll || ls -la . | head -20
