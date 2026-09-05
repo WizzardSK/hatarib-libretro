@@ -7,7 +7,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [as-is, zlib-include]
+        variant: [system-name, system-name-and-zlib-include]
     env:
       CC: x86_64-w64-mingw32-gcc-posix
       AR: x86_64-w64-mingw32-ar
@@ -16,14 +16,15 @@ jobs:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
       - run: sudo apt-get update -qy && sudo apt-get install -qy g++-mingw-w64-x86-64 cmake
-      - name: zlib on its own
-        run: make -f makefile zlib && ls -la zlib_build/include zlib_build/lib
-      - name: as-is
-        if: matrix.variant == 'as-is'
-        run: make -f makefile.libretro
-      - name: with the built zlib's headers on the include path
-        if: matrix.variant == 'zlib-include'
+      - name: telling cmake it is cross compiling
+        if: matrix.variant == 'system-name'
         env:
+          CMAKEFLAGS: -DCMAKE_SYSTEM_NAME=Windows
+        run: make -f makefile.libretro
+      - name: ... and the built zlib's headers
+        if: matrix.variant == 'system-name-and-zlib-include'
+        env:
+          CMAKEFLAGS: -DCMAKE_SYSTEM_NAME=Windows
           CFLAGS: -I${{ github.workspace }}/zlib_build/include
         run: make -f makefile.libretro
-      - run: ls -la hatarib_libretro.* || true
+      - run: ls -la hatarib_libretro.* && file hatarib_libretro.*
