@@ -22,11 +22,12 @@ jobs:
             apt-get update -qq || sed -i "s|http://archive.ubuntu.com|http://old-releases.ubuntu.com|g;s|http://security.ubuntu.com|http://old-releases.ubuntu.com|g" /etc/apt/sources.list
             apt-get update -qq
             DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-              cmake make gcc g++ curl ca-certificates mingw-w64 file >/dev/null
+              cmake make gcc g++ curl ca-certificates mingw-w64 file git >/dev/null
+            git config --global --add safe.directory "*"
             echo "=== the image cmake"
             cmake --version | head -1
             echo "=== hatari as it stands"
-            (cd hatari && cmake -S . -B /tmp/b-old 2>&1 | head -5) || true
+            (mkdir -p /tmp/b-old && cd /tmp/b-old && cmake /w/hatari 2>&1 | head -4) || true
             echo "=== deliver one"
             CMAKE_VER=3.31.6
             curl -sSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-linux-x86_64.tar.gz" | tar -xz -C /opt
