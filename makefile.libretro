@@ -67,6 +67,7 @@ else ifeq ($(platform),libnx)                   # libnx-static
 	#CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(DEVKITPRO)/cmake/NintendoSwitch.cmake
 	MAKEACTION := static
 else ifeq ($(platform),emscripten)              # emscripten-static
+	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(EMSDK)/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 	MAKEACTION := static
 	CORESTATIC_SUFFIX := .bc
 endif

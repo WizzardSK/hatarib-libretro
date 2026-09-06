@@ -78,3 +78,15 @@ jobs:
         run: chmod -R a-w .git
       - run: make -f makefile.libretro platform=unix
       - run: ls -la hatarib_libretro.so
+
+  # Without a toolchain file cmake does not consider itself to be cross
+  # compiling, so hatari builds build68k/gencpu with emcc and then cannot run
+  # them: "./build68k: Permission denied".
+  emscripten:
+    runs-on: ubuntu-24.04
+    container: emscripten/emsdk:latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - run: emmake make -f makefile.libretro platform=emscripten MEMORY=134217728
+      - run: ls -la hatarib_libretro_emscripten.bc
