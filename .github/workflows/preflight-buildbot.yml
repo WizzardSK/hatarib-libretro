@@ -1,0 +1,80 @@
+name: preflight (buildbot targets)
+on: [push, workflow_dispatch]
+
+jobs:
+  # The four android jobs pick their ABI and API level from makefile.libretro.
+  # Without them the NDK picks its own default (armeabi-v7a, API 21), which
+  # builds the same ABI four times and has no fseeko/ftello for avi_record.c.
+  android:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: android-arm,    arch: ARM }
+          - { platform: android-arm64,  arch: AArch64 }
+          - { platform: android-x86,    arch: Intel 80386 }
+          - { platform: android-x86_64, arch: X86-64 }
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: build
+        env:
+          ANDROID_PLATFORM: ${{ matrix.platform }}
+        run: |
+          export NDK_ROOT="$ANDROID_NDK_LATEST_HOME"
+          echo "NDK_ROOT=$NDK_ROOT"
+          make -f makefile.libretro platform="$ANDROID_PLATFORM"
+      - name: the core is for the ABI the job asked for
+        run: |
+          file hatarib_libretro_android.so
+          file hatarib_libretro_android.so | grep -q '${{ matrix.arch }}'
+
+  # devkitPro: the toolchain file has to be passed, or cmake quietly builds the
+  # core with the host compiler and the RetroArch link fails on an incompatible
+  # library. $(DEVKITPRO) is the variable these images actually export.
+  devkitpro:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { platform: wiiu, image: 'devkitpro/devkitppc:latest', arch: PowerPC }
+          - { platform: ctr,  image: 'devkitpro/devkitarm:latest', arch: ARM }
+    container: ${{ matrix.image }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: cmake 3.31.6, unpacked the way the buildbot job does it
+        run: |
+          CMAKE_VER=3.31.6
+          curl -sSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-linux-x86_64.tar.gz" | tar -xz -C /tmp
+          echo "/tmp/cmake-${CMAKE_VER}-linux-x86_64/bin" >> $GITHUB_PATH
+      - name: ... and it also unpacks as a user who cannot write /opt
+        run: |
+          useradd -m unprivileged
+          su unprivileged -c '
+            CMAKE_VER=3.31.6
+            curl -sSL "https://github.com/Kitware/CMake/releases/download/v${CMAKE_VER}/cmake-${CMAKE_VER}-linux-x86_64.tar.gz" | tar -xz -C /tmp
+            /tmp/cmake-${CMAKE_VER}-linux-x86_64/bin/cmake --version'
+      - name: build
+        run: |
+          cmake --version
+          make -f makefile.libretro platform=${{ matrix.platform }}
+      - name: the static core is for the target, not for the host
+        run: |
+          ar p hatarib_libretro_${{ matrix.platform }}.a $(ar t hatarib_libretro_${{ matrix.platform }}.a | head -n1) > /tmp/first.o
+          file /tmp/first.o
+          file /tmp/first.o | grep -q '${{ matrix.arch }}'
+
+  # The console images run the job as a user who cannot write the checkout's
+  # .git, so the build must not reach for git when the submodule is in place.
+  submodules-read-only-git:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: recursive }
+      - name: make .git unwritable, as it is on the buildbot
+        run: chmod -R a-w .git
+      - run: make -f makefile.libretro platform=unix
+      - run: ls -la hatarib_libretro.so
