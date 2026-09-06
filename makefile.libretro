@@ -33,25 +33,29 @@ else ifeq ($(ANDROID_PLATFORM),android-arm)     # android-make: android-arm
 		-DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
 	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=armv7a-linux-androideabi$(ANDROID_API)" \
-		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar \
+		RANLIB=$(ANDROID_NDK_LLVM)/bin/llvm-ranlib
 else ifeq ($(ANDROID_PLATFORM),android-arm64)   # android-make: android-arm64
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
 		-DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
 	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=aarch64-linux-android$(ANDROID_API)" \
-		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar \
+		RANLIB=$(ANDROID_NDK_LLVM)/bin/llvm-ranlib
 else ifeq ($(ANDROID_PLATFORM),android-x86)     # android-make: android-x86
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
 		-DANDROID_ABI=x86 -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
 	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=i686-linux-android$(ANDROID_API)" \
-		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar \
+		RANLIB=$(ANDROID_NDK_LLVM)/bin/llvm-ranlib
 else ifeq ($(ANDROID_PLATFORM),android-x86_64)  # android-make: android-x86_64
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
 		-DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
 	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=x86_64-linux-android$(ANDROID_API)" \
-		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar \
+		RANLIB=$(ANDROID_NDK_LLVM)/bin/llvm-ranlib
 else ifeq ($(platform),ios-arm64)               # ios-arm64
 	COREFILE := $(CORENAME)_libretro_ios
 else ifeq ($(platform),ios9)                    # ios9
@@ -97,5 +101,5 @@ MAKEARGS = $(MAKEACTION) \
 	CMAKEFLAGS_EXTRA="$(CMAKEFLAGS_EXTRA)"
 
 libretro:
-	$(MAKE) -f makefile zlib
+	$(MAKE) -f makefile zlib $(MAKEEXTRA)
 	$(MAKE) -f makefile $(MAKEARGS)

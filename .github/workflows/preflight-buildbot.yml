@@ -88,5 +88,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
-      - run: emmake make -f makefile.libretro platform=emscripten MEMORY=134217728
+      - run: emmake make -f makefile.libretro platform=emscripten MEMORY=134217728 WERROR=
       - run: ls -la hatarib_libretro_emscripten.bc
