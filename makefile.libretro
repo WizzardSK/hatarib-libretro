@@ -87,6 +87,9 @@ else ifeq ($(platform),libnx)                   # libnx-static
 	MAKEACTION := static
 else ifeq ($(platform),emscripten)              # emscripten-static
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(EMSDK)/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
+	# emscripten's clang warns about set-but-unused globals in hatari's own
+	# sources, which -Werror then turns into a failed build
+	MAKEEXTRA := WERROR=
 	MAKEACTION := static
 	CORESTATIC_SUFFIX := .bc
 endif
