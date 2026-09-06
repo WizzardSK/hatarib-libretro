@@ -64,8 +64,8 @@ jobs:
       - name: the static core is for the target, not for the host
         run: |
           ar p hatarib_libretro_${{ matrix.platform }}.a $(ar t hatarib_libretro_${{ matrix.platform }}.a | head -n1) > /tmp/first.o
-          file /tmp/first.o
-          file /tmp/first.o | grep -qi '${{ matrix.arch }}'
+          $DEVKITPPC/bin/powerpc-eabi-objdump -f /tmp/first.o
+          $DEVKITPPC/bin/powerpc-eabi-objdump -f /tmp/first.o | grep -qi '${{ matrix.arch }}'
 
   # The console images run the job as a user who cannot write the checkout's
   # .git, so the build must not reach for git when the submodule is in place.
