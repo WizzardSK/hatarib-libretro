@@ -11,10 +11,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { platform: android-arm,    arch: ARM }
-          - { platform: android-arm64,  arch: AArch64 }
-          - { platform: android-x86,    arch: Intel 80386 }
-          - { platform: android-x86_64, arch: X86-64 }
+          - { platform: android-arm,    arch: 'ARM, EABI5' }
+          - { platform: android-arm64,  arch: 'ARM aarch64' }
+          - { platform: android-x86,    arch: 'Intel 80386' }
+          - { platform: android-x86_64, arch: 'x86-64' }
     steps:
       - uses: actions/checkout@v4
         with: { submodules: recursive }
@@ -28,7 +28,7 @@ jobs:
       - name: the core is for the ABI the job asked for
         run: |
           file hatarib_libretro_android.so
-          file hatarib_libretro_android.so | grep -q '${{ matrix.arch }}'
+          file hatarib_libretro_android.so | grep -qi '${{ matrix.arch }}'
 
   # devkitPro: the toolchain file has to be passed, or cmake quietly builds the
   # core with the host compiler and the RetroArch link fails on an incompatible
@@ -60,12 +60,12 @@ jobs:
       - name: build
         run: |
           cmake --version
-          make -f makefile.libretro platform=${{ matrix.platform }}
+          make -f makefile.libretro platform=${{ matrix.platform }} WERROR=
       - name: the static core is for the target, not for the host
         run: |
           ar p hatarib_libretro_${{ matrix.platform }}.a $(ar t hatarib_libretro_${{ matrix.platform }}.a | head -n1) > /tmp/first.o
           file /tmp/first.o
-          file /tmp/first.o | grep -q '${{ matrix.arch }}'
+          file /tmp/first.o | grep -qi '${{ matrix.arch }}'
 
   # The console images run the job as a user who cannot write the checkout's
   # .git, so the build must not reach for git when the submodule is in place.

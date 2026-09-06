@@ -7,6 +7,13 @@ MAKEACTION ?= core
 MAKEEXTRA ?=
 CMAKEFLAGS_EXTRA ?=
 
+# The android-make template hands us NDK_ROOT and ANDROID_NDK_LLVM but no
+# compiler. cmake gets one from the NDK toolchain file; the core's own
+# objects and the final link do not, and would fall back to the host gcc.
+ANDROID_NDK_LLVM ?= $(NDK_ROOT)/toolchains/llvm/prebuilt/linux-x86_64
+# fseeko/ftello, used by hatari's avi_record.c, arrive in API 24.
+ANDROID_API ?= 24
+
 ifeq ($(platform),win64)                        # windows-x64-mingw
 	CMAKEFLAGS_EXTRA := -DCMAKE_SYSTEM_NAME=Windows
 	MAKEEXTRA := SO_SUFFIX=.dll
@@ -23,20 +30,28 @@ else                                            # osx-arm64
 endif
 else ifeq ($(ANDROID_PLATFORM),android-arm)     # android-make: android-arm
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
-		-DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-24
+		-DANDROID_ABI=armeabi-v7a -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
+	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=armv7a-linux-androideabi$(ANDROID_API)" \
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
 else ifeq ($(ANDROID_PLATFORM),android-arm64)   # android-make: android-arm64
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
-		-DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-24
+		-DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
+	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=aarch64-linux-android$(ANDROID_API)" \
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
 else ifeq ($(ANDROID_PLATFORM),android-x86)     # android-make: android-x86
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
-		-DANDROID_ABI=x86 -DANDROID_PLATFORM=android-24
+		-DANDROID_ABI=x86 -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
+	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=i686-linux-android$(ANDROID_API)" \
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
 else ifeq ($(ANDROID_PLATFORM),android-x86_64)  # android-make: android-x86_64
 	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(NDK_ROOT)/build/cmake/android.toolchain.cmake \
-		-DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-24
+		-DANDROID_ABI=x86_64 -DANDROID_PLATFORM=android-$(ANDROID_API)
 	COREFILE := $(CORENAME)_libretro_android
+	MAKEEXTRA := CC="$(ANDROID_NDK_LLVM)/bin/clang --target=x86_64-linux-android$(ANDROID_API)" \
+		AR=$(ANDROID_NDK_LLVM)/bin/llvm-ar
 else ifeq ($(platform),ios-arm64)               # ios-arm64
 	COREFILE := $(CORENAME)_libretro_ios
 else ifeq ($(platform),ios9)                    # ios9
