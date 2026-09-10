@@ -47,7 +47,12 @@ jobs:
         run: |
           export DEVKITPRO=/opt/devkitpro
           export DEVKITPPC=/opt/devkitpro/devkitPPC
-          make -f makefile.libretro platform=${{ matrix.platform }} -j$(nproc)
+          # This container's devkitPPC is far newer than the buildbot's gcc
+          # 12.1 and finds warnings it does not (uae/string.h sprintf into a
+          # possibly-null pointer, -Werror=format-overflow), which would fail
+          # the build for a reason the buildbot never sees. The point here is
+          # the toolchain and the flock check, so let the warnings be warnings.
+          make -f makefile.libretro platform=${{ matrix.platform }} -j$(nproc) WERROR=-Wall
 
       - name: Check the archive
         run: |
