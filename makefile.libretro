@@ -73,7 +73,10 @@ else ifeq ($(platform),vita)                    # vita-static
 		RANLIB="$(VITASDK)/bin/arm-vita-eabi-ranlib"
 	MAKEACTION := static
 else ifeq ($(platform),wii)                     # wii-static
-	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(DEVKITPRO)/wii.cmake
+	# -DHAVE_FLOCK= for the same reason as wiiu below: newlib has no flock,
+	# but a toolchain that cannot link a plain test executable leaves CMake
+	# checking the declaration only, and hatari's file.c then calls it.
+	CMAKEFLAGS_EXTRA := -DCMAKE_TOOLCHAIN_FILE=$(DEVKITPRO)/wii.cmake -DHAVE_FLOCK=
 	# That toolchain file names the compiler without a path, so CMake's own
 	# compiler check fails ("is not a full path and was not found in the PATH")
 	# unless devkitPPC's bin is on PATH. Passing CC below is not enough: the
