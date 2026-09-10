@@ -1,0 +1,100 @@
+# Preflight for the four console jobs that fail on the buildbot (wii, wiiu,
+# vita, libnx). The buildbot's images are not reachable from here, so each job
+# runs in the nearest public toolchain container and builds the same thing the
+# buildbot builds - the core's static archive - then checks the two things that
+# actually broke: the architecture of the archive, and whether anything in it
+# still references flock().
+name: console preflight
+
+on:
+  push:
+    branches: [buildbot-console-fixes]
+  workflow_dispatch:
+
+jobs:
+  ppc:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [wii, wiiu]
+    name: ${{ matrix.platform }}
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitppc:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Stand in for the buildbot's /opt/devkitpro/wii.cmake
+        if: matrix.platform == 'wii'
+        run: |
+          # The buildbot image ships a wii.cmake that names the compiler
+          # without a path - which is the whole point of the PATH fix - and
+          # devkitPro's own Wii.cmake uses full paths, so it would not
+          # reproduce the failure. Write one that behaves like the buildbot's.
+          cat > /opt/devkitpro/wii.cmake <<'EOF'
+          set(CMAKE_SYSTEM_NAME Generic)
+          set(CMAKE_SYSTEM_PROCESSOR powerpc)
+          set(CMAKE_C_COMPILER powerpc-eabi-gcc)
+          set(CMAKE_CXX_COMPILER powerpc-eabi-g++)
+          set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+          set(CMAKE_C_FLAGS "-mrvl -mcpu=750 -meabi -mhard-float" CACHE STRING "")
+          EOF
+          sed -i 's/^          //' /opt/devkitpro/wii.cmake
+          cat /opt/devkitpro/wii.cmake
+
+      - name: Build
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITPPC=/opt/devkitpro/devkitPPC
+          make -f makefile.libretro platform=${{ matrix.platform }} -j$(nproc)
+
+      - name: Check the archive
+        run: |
+          set -e
+          AR=$(ls hatarib_libretro_${{ matrix.platform }}.a)
+          /opt/devkitpro/devkitPPC/bin/powerpc-eabi-objdump -f "$AR" | head -4
+          echo "--- undefined flock (expect nothing)"
+          /opt/devkitpro/devkitPPC/bin/powerpc-eabi-nm -u "$AR" | grep flock && exit 1 || true
+
+  switch:
+    name: libnx
+    runs-on: ubuntu-latest
+    container: devkitpro/devkita64:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build
+        run: |
+          export DEVKITPRO=/opt/devkitpro
+          export DEVKITA64=/opt/devkitpro/devkitA64
+          make -f makefile.libretro platform=libnx -j$(nproc)
+      - name: Check the archive
+        run: |
+          set -e
+          /opt/devkitpro/devkitA64/bin/aarch64-none-elf-objdump -f hatarib_libretro_libnx.a | head -4
+          echo "--- undefined flock (expect nothing)"
+          /opt/devkitpro/devkitA64/bin/aarch64-none-elf-nm -u hatarib_libretro_libnx.a | grep flock && exit 1 || true
+
+  vita:
+    name: vita
+    runs-on: ubuntu-latest
+    container: vitasdk/vitasdk:latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Dependencies
+        run: apk add --no-cache cmake make git bash || true
+      - name: Build
+        run: |
+          export VITASDK=/usr/local/vitasdk
+          export PATH=$VITASDK/bin:$PATH
+          make -f makefile.libretro platform=vita -j$(nproc)
+      - name: Check the archive
+        run: |
+          set -e
+          /usr/local/vitasdk/bin/arm-vita-eabi-objdump -f hatarib_libretro_vita.a | head -4
+          echo "--- undefined flock (expect nothing)"
+          /usr/local/vitasdk/bin/arm-vita-eabi-nm -u hatarib_libretro_vita.a | grep flock && exit 1 || true
